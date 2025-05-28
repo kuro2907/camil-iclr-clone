@@ -3,6 +3,8 @@ from tensorflow.keras import backend as K
 from tensorflow.keras import initializers, regularizers
 from tensorflow.keras.layers import Dense, multiply
 from nystromformer.nystromformer import NystromAttention
+
+
 class MILAttentionLayer(tf.keras.layers.Layer):
     """Implementation of the attention-based Deep MIL layer.
     Args:
@@ -16,12 +18,12 @@ class MILAttentionLayer(tf.keras.layers.Layer):
     """
 
     def __init__(
-            self,
-            weight_params_dim,
-            kernel_initializer="glorot_uniform",
-            kernel_regularizer=None,
-            use_gated=False,
-            **kwargs,
+        self,
+        weight_params_dim,
+        kernel_initializer="glorot_uniform",
+        kernel_regularizer=None,
+        use_gated=False,
+        **kwargs,
     ):
 
         super().__init__(**kwargs)
@@ -162,10 +164,19 @@ class Last_Sigmoid(tf.keras.layers.Layer):
         2D tensor with shape: (1, units)
     """
 
-    def __init__(self, output_dim, subtyping,kernel_initializer='glorot_uniform', bias_initializer='zeros',
-                 pooling_mode="sum",
-                 kernel_regularizer=None, bias_regularizer=None,norm=False,
-                 use_bias=True, **kwargs):
+    def __init__(
+        self,
+        output_dim,
+        subtyping,
+        kernel_initializer="glorot_uniform",
+        bias_initializer="zeros",
+        pooling_mode="sum",
+        kernel_regularizer=None,
+        bias_regularizer=None,
+        norm=False,
+        use_bias=True,
+        **kwargs,
+    ):
         self.output_dim = output_dim
 
         self.kernel_initializer = initializers.get(kernel_initializer)
@@ -174,37 +185,38 @@ class Last_Sigmoid(tf.keras.layers.Layer):
         self.bias_regularizer = regularizers.get(bias_regularizer)
         self.pooling_mode = pooling_mode
         self.use_bias = use_bias
-        self.subtyping=subtyping
-
+        self.subtyping = subtyping
 
         super(Last_Sigmoid, self).__init__(**kwargs)
 
-    def max_pooling(self,x):
+    def max_pooling(self, x):
 
         output = K.max(x, axis=0, keepdims=True)
         return output
 
-    def sum_pooling(self,x):
+    def sum_pooling(self, x):
 
-        output =  K.sum(x, axis=0, keepdims=True)
+        output = K.sum(x, axis=0, keepdims=True)
         return output
-
 
     def build(self, input_shape):
         assert len(input_shape) == 2
         input_dim = input_shape[1]
 
-
-        self.kernel = self.add_weight(shape=(input_dim, self.output_dim),
-                                      initializer=self.kernel_initializer,
-                                      name='kernel',
-                                      regularizer=self.kernel_regularizer)
+        self.kernel = self.add_weight(
+            shape=(input_dim, self.output_dim),
+            initializer=self.kernel_initializer,
+            name="kernel",
+            regularizer=self.kernel_regularizer,
+        )
 
         if self.use_bias:
-            self.bias = self.add_weight(shape=(self.output_dim,),
-                                        initializer=self.bias_initializer,
-                                        name='bias',
-                                        regularizer=self.bias_regularizer)
+            self.bias = self.add_weight(
+                shape=(self.output_dim,),
+                initializer=self.bias_initializer,
+                name="bias",
+                regularizer=self.bias_regularizer,
+            )
         else:
             self.bias = None
 
@@ -212,10 +224,10 @@ class Last_Sigmoid(tf.keras.layers.Layer):
 
     def call(self, x):
 
-        if self.pooling_mode == 'max':
-            x= self.max_pooling(x)
-        if self.pooling_mode == 'sum':
-            x= self.sum_pooling(x)
+        if self.pooling_mode == "max":
+            x = self.max_pooling(x)
+        if self.pooling_mode == "sum":
+            x = self.sum_pooling(x)
 
         if self.subtyping:
             x = K.dot(x, self.kernel)
@@ -239,11 +251,11 @@ class Last_Sigmoid(tf.keras.layers.Layer):
 class CustomAttention(tf.keras.layers.Layer):
 
     def __init__(
-            self,
-            weight_params_dim,
-            kernel_initializer="glorot_uniform",
-            kernel_regularizer=None,
-            **kwargs,
+        self,
+        weight_params_dim,
+        kernel_initializer="glorot_uniform",
+        kernel_regularizer=None,
+        **kwargs,
     ):
         super().__init__(**kwargs)
 
@@ -295,10 +307,11 @@ class CustomAttention(tf.keras.layers.Layer):
 
         dk = tf.cast(tf.shape(k)[-1], tf.float32)
 
-        matmul_qk = tf.tensordot(q, tf.transpose(k), axes=1)  # (..., seq_len_q, seq_len_k)
+        matmul_qk = tf.tensordot(
+            q, tf.transpose(k), axes=1
+        )  # (..., seq_len_q, seq_len_k)
 
         scaled_attention_logits = matmul_qk / tf.math.sqrt(dk)
-
 
         return scaled_attention_logits
 
@@ -311,8 +324,9 @@ class encoder(tf.keras.layers.Layer):
 
         self.neigh = NeighborAggregator(output_dim=1, name="alpha")
 
-        self.nyst_att = NystromAttention(dim=512, dim_head=64, heads=8, num_landmarks=256,
-                                         pinv_iterations=6)
+        self.nyst_att = NystromAttention(
+            dim=512, dim_head=64, heads=8, num_landmarks=256, pinv_iterations=6
+        )
 
     def call(self, inputs):
 
@@ -331,6 +345,5 @@ class encoder(tf.keras.layers.Layer):
 
         wei = tf.math.sigmoid(-xl)
         squared_wei = tf.square(wei)
-        xo = (xl * 2 * squared_wei) + 2* encoder_output * (1 - squared_wei)
+        xo = (xl * 2 * squared_wei) + 2 * encoder_output * (1 - squared_wei)
         return xo, alpha
-

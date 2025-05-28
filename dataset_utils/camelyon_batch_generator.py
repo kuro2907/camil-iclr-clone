@@ -5,6 +5,8 @@ import h5py
 import pandas as pd
 from sklearn import preprocessing
 from sklearn.preprocessing import OneHotEncoder
+from sklearn.metrics import pairwise_distances
+
 
 class DataGenerator(tf.keras.utils.Sequence):
     def __init__(self, filenames, args, shuffle=False, train=True, batch_size=1):
@@ -14,14 +16,14 @@ class DataGenerator(tf.keras.utils.Sequence):
         self.shuffle = shuffle
         self.label_file = args.label_file
         self.on_epoch_end()
-        self.enc = OneHotEncoder(handle_unknown='ignore')
+        self.enc = OneHotEncoder(handle_unknown="ignore")
 
     def __len__(self):
-        'Denotes the number of batches per epoch'
+        "Denotes the number of batches per epoch"
         return int(np.floor(len(self.filenames)))
 
     def on_epoch_end(self):
-        'Updates indices after each epoch'
+        "Updates indices after each epoch"
         self.indices = np.arange(len(self.filenames))
 
         if self.train == True:
@@ -29,7 +31,7 @@ class DataGenerator(tf.keras.utils.Sequence):
 
     def __getitem__(self, index):
         "returns one element from the data_set"
-        indices = self.indices[index * self.batch_size:(index + 1) * self.batch_size]
+        indices = self.indices[index * self.batch_size : (index + 1) * self.batch_size]
 
         list_IDs_temp = [self.filenames[k] for k in indices]
 
@@ -51,21 +53,46 @@ class DataGenerator(tf.keras.utils.Sequence):
         """
 
         for i in range(len(filenames)):
-
             with h5py.File(filenames[i], "r") as hdf5_file:
-
                 base_name = os.path.splitext(os.path.basename(filenames[i]))[0]
 
-                features = hdf5_file['features'][:]
+                features = hdf5_file["features"][:]
+                features = features[:, :512]
+                features = np.nan_to_num(features)
 
-                neighbor_indices = hdf5_file['indices'][:]
-
-                values = hdf5_file['similarities'][:]
+                dist_metric = "cosine"
+                top_k = 16
+                pairwise_dists = pairwise_distances(features, metric=dist_metric)
+                neighbor_indices = np.argsort(pairwise_dists, axis=1)[:, :top_k]
+                values = np.take_along_axis(pairwise_dists, neighbor_indices, axis=1)
                 values = np.nan_to_num(values)
-
                 references = pd.read_csv(self.label_file)
+                # Tra cứu nhãn từ file CSV
+                matched = references["slide_label"].loc[
+                    references["slide_id"] == base_name
+                ]
+                if not matched.empty:
+                    bag_label = matched.values.tolist()[0]
+                else:
+                    print(f"[Warning] Slide ID {base_name} not found in label file.")
+                    bag_label = None  # hoặc xử lý mặc định
 
-                bag_label = references["slide_label"].loc[references["slide_id"] == base_name].values.tolist()[0]
+        # for i in range(len(filenames)):
+
+        #     with h5py.File(filenames[i], "r") as hdf5_file:
+
+        #         base_name = os.path.splitext(os.path.basename(filenames[i]))[0]
+
+        #         features = hdf5_file['features'][:]
+
+        #         neighbor_indices = hdf5_file['indices'][:]
+
+        #         values = hdf5_file['similarities'][:]
+        #         values = np.nan_to_num(values)
+
+        #         references = pd.read_csv(self.label_file)
+
+        #         bag_label = references["slide_label"].loc[references["slide_id"] == base_name].values.tolist()[0]
 
         Idx = neighbor_indices[:, :8]
         rows = np.asarray([[enum] * len(item) for enum, item in enumerate(Idx)]).ravel()
@@ -77,17 +104,21 @@ class DataGenerator(tf.keras.utils.Sequence):
 
         similarities = np.exp(-normalized_matrix)
 
-        values = np.concatenate((np.max(similarities, axis=1).reshape(-1, 1), similarities), axis=1)
+        values = np.concatenate(
+            (np.max(similarities, axis=1).reshape(-1, 1), similarities), axis=1
+        )
 
         values = values[:, :8]
 
         values = values.ravel().tolist()
 
-        sparse_coords= list(zip(rows, columns))
+        sparse_coords = list(zip(rows, columns))
 
-        sparse_matrix = tf.sparse.SparseTensor(indices=sparse_coords,
-                                               values=values,
-                                               dense_shape=[features.shape[0], features.shape[0]])
+        sparse_matrix = tf.sparse.SparseTensor(
+            indices=sparse_coords,
+            values=values,
+            dense_shape=[features.shape[0], features.shape[0]],
+        )
         sparse_matrix = tf.sparse.reorder(sparse_matrix)
 
         return features, sparse_matrix, bag_label
