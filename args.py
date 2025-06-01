@@ -72,7 +72,7 @@ def parse_args():
         "--input_shape",
         dest="input_shape",
         help="shape of the image",
-        default=(512,),
+        default=(1024,),
         type=int,
         nargs=3,
     )
