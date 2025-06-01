@@ -13,6 +13,13 @@ def parse_args():
     """
     parser = argparse.ArgumentParser(description="Train CAMIL")
     parser.add_argument(
+        "--config",
+        dest="config",
+        help="config file",
+        default="configs/camil_camelyon16.yaml",
+        type=str,
+    )
+    parser.add_argument(
         "--save_dir",
         dest="save_dir",
         help="directory where the weights of the model are stored",
