@@ -22,6 +22,7 @@ from tensorflow.keras.regularizers import l2
 from tensorflow.keras.losses import BinaryCrossentropy
 from models.metrics import eval_metric
 from nystromformer.nystromformer import NystromAttention
+from dataset_utils.camelyon16 import Camelyon16Dataset
 
 
 class CAMIL:
@@ -104,7 +105,7 @@ class CAMIL:
     def model(self):
         return self.net
 
-    def train(self, train_bags, fold, val_bags, args):
+    def train(self, train_bags, dataset, fold, val_bags, args):
         """
         Train the Graph Att net
         Parameters
@@ -121,10 +122,10 @@ class CAMIL:
         as well as validation loss values and validation metrics values.
         """
 
-        train_gen = DataGenerator(
+        train_gen = dataset(
             args=args, batch_size=1, shuffle=False, filenames=train_bags, train=True
         )
-        val_gen = DataGenerator(
+        val_gen = dataset(
             args=args, batch_size=1, shuffle=False, filenames=val_bags, train=True
         )
         print(vars(train_gen))
@@ -271,7 +272,7 @@ class CAMIL:
 
         callbacks.on_train_end(logs=logs)
 
-    def predict(self, test_bags, fold, args, test_model):
+    def predict(self, test_bags, dataset, fold, args, test_model):
         """
         Evaluate the transformer_k set
         Parameters
@@ -298,7 +299,7 @@ class CAMIL:
         )
         test_model.load_weights(checkpoint_path)
 
-        test_gen = DataGenerator(
+        test_gen = dataset(
             args=args, batch_size=1, filenames=test_bags, train=False
         )
 
