@@ -55,7 +55,7 @@ class Camelyon16Dataset(tf.keras.utils.Sequence):
         for i in range(len(filenames)):
             with h5py.File(filenames[i], "r") as hdf5_file:
                 features = hdf5_file["features"][:]
-                features = features[:, :512]
+                features = features[:, :1024]
                 features = np.nan_to_num(features)
 
                 dist_metric = "cosine"
