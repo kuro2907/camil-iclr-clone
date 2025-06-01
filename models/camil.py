@@ -225,7 +225,7 @@ class CAMIL:
             print("\nStart of epoch %d" % (epoch,))
             start_time = time.time()
             for step, (x_batch_train, y_batch_train) in enumerate(train_gen):
-                print("step", step)
+                print("LOG: step", step)
                 callbacks.on_batch_begin(step, logs=logs)
                 callbacks.on_train_batch_begin(step, logs=logs)
                 train_dict = train_step(
