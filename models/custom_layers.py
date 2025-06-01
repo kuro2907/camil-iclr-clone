@@ -320,12 +320,12 @@ class encoder(tf.keras.layers.Layer):
     def __init__(self):
         super(encoder, self).__init__()
         self.custom_att = CustomAttention(weight_params_dim=256, name="custom_att")
-        self.wv = tf.keras.layers.Dense(512)
+        self.wv = tf.keras.layers.Dense(1024)
 
         self.neigh = NeighborAggregator(output_dim=1, name="alpha")
 
         self.nyst_att = NystromAttention(
-            dim=512, dim_head=64, heads=8, num_landmarks=256, pinv_iterations=6
+            dim=1024, dim_head=64, heads=8, num_landmarks=256, pinv_iterations=6
         )
 
     def call(self, inputs):
@@ -334,7 +334,7 @@ class encoder(tf.keras.layers.Layer):
         sparse_adj = inputs[1]
 
         encoder_output = self.nyst_att(tf.expand_dims(dense, axis=0), return_attn=False)
-        xg = tf.ensure_shape(tf.squeeze(encoder_output), [None, 512])
+        xg = tf.ensure_shape(tf.squeeze(encoder_output), [None, 1024])
 
         encoder_output = xg + dense
 

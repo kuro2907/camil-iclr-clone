@@ -62,12 +62,12 @@ class CAMIL:
         )
 
         self.custom_att = CustomAttention(weight_params_dim=256, name="custom_att")
-        self.wv = tf.keras.layers.Dense(1024)
+        self.wv = tf.keras.layers.Dense(512)
 
         self.neigh = NeighborAggregator(output_dim=1, name="alpha")
 
         self.nyst_att = NystromAttention(
-            dim=1024, dim_head=64, heads=8, num_landmarks=256, pinv_iterations=6
+            dim=512, dim_head=64, heads=8, num_landmarks=256, pinv_iterations=6
         )
 
         self.encoder = encoder()
